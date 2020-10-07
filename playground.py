@@ -22,13 +22,11 @@ from skimage.feature import hog
 from skimage import data, exposure
 from skimage.color import rgb2gray
 #import plotly
-import pandas as pd
 import matplotlib
 from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from src.vis import util as vis
-import neptune
 
 
 sns.set()
