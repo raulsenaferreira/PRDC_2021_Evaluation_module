@@ -28,6 +28,7 @@ from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from src.vis import util as vis
+import neptune
 
 
 sns.set()
