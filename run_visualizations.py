@@ -1,5 +1,6 @@
 import os
 import argparse
+from config.novelty_detection import plot_pos_neg_comparison
 
 
 if __name__ == "__main__":
@@ -12,4 +13,5 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	if args.config_id == 1:
-		pass
+		arr_exp = ['PHD-107', 'PHD-108', 'PHD-109']
+		plot_pos_neg_comparison.plot(arr_exp)

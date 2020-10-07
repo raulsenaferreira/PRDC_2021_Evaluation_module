@@ -1,3 +1,4 @@
 env/
-vis/__pycache__/
+aux_data/
+src/__pycache__/
 plots/

@@ -4,7 +4,7 @@ import numpy as np
 
 def load_artifact(artifact_name, neptune_experiments):	
 	result_arr = []
-	tmp_path = os.path.join('results', 'temp')
+	tmp_path = os.path.join('aux_data', 'temp')
 
 	for experiment in neptune_experiments:
 		experiment.download_artifact(artifact_name, tmp_path)

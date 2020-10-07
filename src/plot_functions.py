@@ -5,9 +5,9 @@ import matplotlib.animation as ani
 import numpy as np
 import matplotlib.patches as mpatches
 import pickle
-from src.utils import util
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
+from src import util
+#from shapely.geometry import Point
+#from shapely.geometry.polygon import Polygon
 
 
 
@@ -538,3 +538,42 @@ def plot_single_clf_pca_actFunc_based_analysis(model, dataset_name, clf, instanc
     anim.save(file, fps=1)
 
     #plt.show()
+
+
+def visualize_experiments(id_experiments, names, title, classes_to_monitor):
+
+    project = neptune.init('raulsenaferreira/PhD')
+    experiments = project.get_experiments(id=id_experiments)
+
+    arr_readouts = []
+    img_folder_path = os.path.join('src', 'tests', 'results', 'img') 
+
+    for experiment, name in zip(experiments, names):
+        avg_cf = {}
+
+        logs = experiment.get_logs()
+        #print(logs['True Positive - Class 0'].y) 
+
+        # storing results
+        readout = Readout()
+        readout.name = name
+        
+        readout.avg_acc = logs['Accuracy'].y
+        readout.avg_time = logs['Process time'].y
+        readout.avg_memory = logs['Memory'].y
+        readout.avg_F1 = logs['F1'].y
+
+        for class_to_monitor in range(classes_to_monitor):
+            fp = 'False Positive - Class {}'.format(class_to_monitor)
+            fn = 'False Negative - Class {}'.format(class_to_monitor)
+            tp = 'True Positive - Class {}'.format(class_to_monitor)
+            tn = 'True Negative - Class {}'.format(class_to_monitor)
+
+            avg_cf.update({class_to_monitor: [int(float(logs[fp].y)), int(float(logs[fn].y)), int(float(logs[tp].y)), int(float(logs[tn].y))]})
+        readout.avg_cf = avg_cf
+
+        arr_readouts.append(readout)
+
+    fig_name = img_folder_path+'all_methods_class_'+title+'.pdf'
+    os.makedirs(img_folder_path, exist_ok=True)
+    metrics.plot_pos_neg_rate_stacked_bars_total(title, arr_readouts, classes_to_monitor, fig_name)
