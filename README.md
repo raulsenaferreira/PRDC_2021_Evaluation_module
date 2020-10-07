@@ -7,4 +7,4 @@ python -m venv env
 
 pip install -r requirements.txt
 
-python run_visualization.py path_for_saving_plots
+python run_visualization.py config_id path_for_saving_plots
