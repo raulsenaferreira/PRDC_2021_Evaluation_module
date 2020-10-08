@@ -13,7 +13,7 @@ def load_artifact(artifact_name, neptune_experiments):
 		arr = np.load(file_path)
 		os.remove(file_path)
 
-		result_arr.append(list(arr))
+		result_arr.append(arr)
 
 	return result_arr
 
