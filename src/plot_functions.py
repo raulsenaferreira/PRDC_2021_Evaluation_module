@@ -1,14 +1,27 @@
 import os
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.animation as ani
 import numpy as np
 import matplotlib.patches as mpatches
+from matplotlib.backends.backend_pdf import PdfPages
 import pickle
 from src import util
 #from shapely.geometry import Point
 #from shapely.geometry.polygon import Polygon
 
+
+
+def multipage(filename, figs=None, dpi=200):
+    pp = PdfPages(filename)
+    if figs is None:
+        figs = [plt.figure(n) for n in plt.get_fignums()]
+    for fig in figs:
+        fig.savefig(pp, format='pdf')
+    pp.close()
+    #usage
+    #multipage('multipage_w_raster.pdf', [fig2, fig3], dpi=250)
 
 
 def plotDistributions(distributions):
@@ -576,13 +589,13 @@ def visualize_experiments(experiments, threat, names, title, classes_to_monitor)
     metrics.plot_pos_neg_rate_stacked_bars_total(title, arr_readouts, classes_to_monitor, fig_name)
 
 
-def pos_neg_stacked_bars(title, arr_readouts, fig_path):
+def pos_neg_stacked_bars(title, methods, arr_pos_neg, fig_path):
     figures = []
-    x = []
-    y_fp = [] 
-    y_fn = [] 
-    y_tp = [] 
-    y_tn = []
+
+    y_tn = arr_pos_neg[0]
+    y_fp = arr_pos_neg[1] 
+    y_fn = arr_pos_neg[2] 
+    y_tp = arr_pos_neg[3] 
 
     #COLOR = 'black'
     #mpl.rcParams['text.color'] = 'white'
@@ -591,16 +604,7 @@ def pos_neg_stacked_bars(title, arr_readouts, fig_path):
     #mpl.rcParams['ytick.color'] = 'black'
     mpl.rcParams['font.size'] = 12
 
-    for readout in arr_readouts:
-        fp, fn, tp, tn = 0, 0, 0, 0
-        x.append(readout.name)
-
-        y_fp.append(fp)
-        y_fn.append(fn)
-        y_tp.append(tp)
-        y_tn.append(tn)
-
-    xticks = [i for i in range(len(x))]
+    xticks = [i for i in range(len(methods))]
     
     fig = plt.figure()
     ax = fig.add_subplot()
@@ -611,18 +615,18 @@ def pos_neg_stacked_bars(title, arr_readouts, fig_path):
     #darkgrey = 'darkgrey'
     #gray = 'gray'
     #grey = 'grey'
-    ax.bar(x, y_tp, color=blue, edgecolor="white", width=width, label='True positive')
+    ax.bar(methods, y_tp, color=blue, edgecolor="white", width=width, label='True positive')
     sums = y_tp
-    ax.bar(x, y_fn, bottom=sums, color=yellow, edgecolor="white", hatch="x", width=width, label='False negative')
+    ax.bar(methods, y_fn, bottom=sums, color=yellow, edgecolor="white", hatch="x", width=width, label='False negative')
     sums =[_x + _y for _x, _y in zip(sums, y_fn)]
-    ax.bar(x, y_fp, bottom=sums, color=red, edgecolor='white', hatch=".", width=width, label='False positive')
+    ax.bar(methods, y_fp, bottom=sums, color=red, edgecolor='white', hatch=".", width=width, label='False positive')
     sums = [_x + _y for _x, _y in zip(sums, y_fp)]
-    #ax.bar(x, y_tn, bottom=sums, color=[0, 0.2, 0.1], edgecolor='white', hatch="*", width=width, label='True negative')
+    #ax.bar(methods, y_tn, bottom=sums, color=[0, 0.2, 0.1], edgecolor='white', hatch="*", width=width, label='True negative')
 
     ax.set_xlabel("Methods")
     ax.set_ylabel("Instances")
     #ax.set_ylim([0, 100])
-    ax.xaxis.set_ticks(xticks, x)
+    ax.xaxis.set_ticks(xticks, methods)
     ax.legend()
     #ax.annotate('{}'.format(height))
 

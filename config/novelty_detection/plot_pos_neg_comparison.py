@@ -34,6 +34,10 @@ def print_dataframe_to_latex(df_results, caption, label, path_for_saving_plots, 
 	df_results['FN'] = df_results['FN'].astype(str)
 	df_results['FN'].at[ind] = '\textbf{'+str(df_results['FN'][ind])+'}'
 
+	ind = df_results['F1_Macro'].idxmax()
+	df_results['F1_Macro'] = df_results['F1_Macro'].astype(str)
+	df_results['F1_Macro'].at[ind] = '\textbf{'+str(df_results['F1_Macro'][ind])+'}'
+
 	tex_path = os.path.join(path_for_saving_plots, 'tex', file_name)
 	
 	df_results.to_latex(tex_path, caption=caption, label=label, escape=False, index=False)
@@ -43,7 +47,7 @@ def plot(arr_id, names, title, path_for_saving_plots):
 
 	table_ML = {'Architecture': [], 'Accuracy': [], 'F1': [], 'F1-Micro': []}
 	table_SM = {'Method': [], 'Detection': [], 'Confidence': [], 'Memory': [], 'Time': []}
-	table_system = dict(Combination= [], MCC= [], TP= [], FP= [], TN= [], FN= []) #'F1_0': [], 'F1_1': [], 'F1-Macro': [], 
+	table_system = dict(Experiment= [], MCC= [], TP= [], FP= [], TN= [], FN= [], F1_Macro= []) #'F1_0': [], 'F1_1': [], 
 	table_novelty = {'TPR_ID_FPR_OOD': [], 'AUPR_ID': [], 'AUPR_OOD': []}
 
 	project = npte.neptune_init('novelty-detection')
@@ -54,7 +58,7 @@ def plot(arr_id, names, title, path_for_saving_plots):
 	arr_pnc_ood = util.load_artifact('Pos_Neg_Classified_OOD.npy', experiments)
 	arr_pnl_ood = util.load_artifact('Pos_Neg_Labels_OOD.npy', experiments)
 	
-	arr_cm = []
+	arr_cm = [[], [], [], []]
 	
 	# total = ID + ODD
 	for name, pnl_id, pnl_ood, pnc_id, pnc_ood in zip(names, arr_pnl_id, arr_pnl_ood, arr_pnc_id, arr_pnc_ood):
@@ -63,41 +67,37 @@ def plot(arr_id, names, title, path_for_saving_plots):
 		y_pred = np.hstack([pnc_id, pnc_ood])
 		
 		cm_total = confusion_matrix(y_true, y_pred)
-		#print(cm_total)
+		tn = cm_total[0][0]
+		fp = cm_total[0][1]
+		fn = cm_total[1][0]
+		tp = cm_total[1][1]
+		arr_cm[0].append(tn)
+		arr_cm[1].append(fp)
+		arr_cm[2].append(fn)
+		arr_cm[3].append(tp)
+		
+		cr = classification_report(y_true, y_pred, output_dict=True)
+		#print(cr)
 
 		df = pd.DataFrame(cm_total)
-		#print(df.da.export_metrics(metrics_to_include=['accuracy', 'precision', 'recall', 'f1']))
-		#print(matthews_corrcoef(y_true, y_pred))
-		#print(classification_report(y_true, y_pred))
-		cr = classification_report(y_true, y_pred, output_dict=True)
 
-		table_system['Combination'].append(name)
-		#table_system['F1-Macro'].append(cr['macro avg'])
+		table_system['Experiment'].append(name)
 		table_system['MCC'].append(round(matthews_corrcoef(y_true, y_pred), 2))
 		table_system['TP'].append(round(df.da.true_positive_rate.values[0], 2))
 		table_system['FP'].append(round(df.da.false_positive_rate.values[0], 2))
 		table_system['TN'].append(round(df.da.true_negative_rate.values[0], 2))
 		table_system['FN'].append(round(df.da.false_negative_rate.values[0], 2))
+		table_system['F1_Macro'].append(round(cr['macro avg']['f1-score'], 2))
 	
 	df_results = pd.DataFrame.from_dict(table_system)
 
 	caption = 'Comparing outside-of-the-box-based monitors'
 	label = 'table_1'
-	print_dataframe_to_latex(df_results, caption, label, path_for_saving_plots, 'table.tex')
+	print_dataframe_to_latex(df_results, caption, label, path_for_saving_plots, '{}.tex'.format(label))
 	
-	
-	'''
-	with open(tex_path,'w') as tf:
-		tf.write(df_results.to_latex(index=False))
-	'''
-	#df = pd.DataFrame(cr)
-	#df['MCC'] = matthews_corrcoef(y_true, y_pred)
-	#print(df)
+	#fig = plt()
 	#df.plot.bar(stacked=True)
 	#plt.show()
-	# access metrics for each class by index
-	#print(df.da.sensitivity)
-
-	#arr_cm.append(cm_total)
-	
-	#pos_neg_stacked_bars(title, names, arr_readouts, path_for_saving_plots)
+	file_name = 'fig_1'
+	fig_path = os.path.join(path_for_saving_plots, 'img', '{}.pdf'.format(file_name))
+	pos_neg_stacked_bars(title, names, arr_cm, fig_path)

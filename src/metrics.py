@@ -148,17 +148,6 @@ def plot_pos_neg_rate_stacked_bars_total(experiment_name, arr_readouts, num_clas
 	multipage(fig_path, figures, dpi=250)
 
 
-def multipage(filename, figs=None, dpi=200):
-	pp = PdfPages(filename)
-	if figs is None:
-		figs = [plt.figure(n) for n in plt.get_fignums()]
-	for fig in figs:
-		fig.savefig(pp, format='pdf')
-	pp.close()
-	#usage
-	#multipage('multipage_w_raster.pdf', [fig2, fig3], dpi=250)
-
-
 def plot_act_func_boxes_animation(boxes, point):
 	return True
 
