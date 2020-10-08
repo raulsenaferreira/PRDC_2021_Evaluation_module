@@ -5,6 +5,7 @@ import numpy as np
 def load_artifact(artifact_name, neptune_experiments):	
 	result_arr = []
 	tmp_path = os.path.join('aux_data', 'temp')
+	os.makedirs(tmp_path, exist_ok=True)
 
 	for experiment in neptune_experiments:
 		experiment.download_artifact(artifact_name, tmp_path)
@@ -12,9 +13,9 @@ def load_artifact(artifact_name, neptune_experiments):
 		arr = np.load(file_path)
 		os.remove(file_path)
 
-		result_arr.append(arr)
+		result_arr.append(list(arr))
 
-	return np.array(result_arr)
+	return result_arr
 
 
 def save_results(experiment, arr_readouts, plot=False):

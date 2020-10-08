@@ -115,14 +115,14 @@ def plot_pos_neg_rate_stacked_bars_total(experiment_name, arr_readouts, num_clas
 	blue = [0, .4, .6]
 	yellow = [1, 0.65, 0.25]
 	red = [1, 0, 0]
-	darkgrey = 'darkgrey'
-	gray = 'gray'
-	grey = 'grey'
-	ax.bar(x, y_tp, color=darkgrey, edgecolor="white", width=width, label='True positive')
+	#darkgrey = 'darkgrey'
+	#gray = 'gray'
+	#grey = 'grey'
+	ax.bar(x, y_tp, color=blue, edgecolor="white", width=width, label='True positive')
 	sums = y_tp
-	ax.bar(x, y_fn, bottom=sums, color=grey, edgecolor="white", hatch="x", width=width, label='False negative')
+	ax.bar(x, y_fn, bottom=sums, color=yellow, edgecolor="white", hatch="x", width=width, label='False negative')
 	sums =[_x + _y for _x, _y in zip(sums, y_fn)]
-	ax.bar(x, y_fp, bottom=sums, color=gray, edgecolor='white', hatch=".", width=width, label='False positive')
+	ax.bar(x, y_fp, bottom=sums, color=red, edgecolor='white', hatch=".", width=width, label='False positive')
 	sums = [_x + _y for _x, _y in zip(sums, y_fp)]
 	#ax.bar(x, y_tn, bottom=sums, color=[0, 0.2, 0.1], edgecolor='white', hatch="*", width=width, label='True negative')
 
@@ -322,5 +322,8 @@ def confusion_matrix():
 	plt.show()
 
 
+
+
+
 if __name__ == '__main__':
-	confusion_matrix()
+	#confusion_matrix()

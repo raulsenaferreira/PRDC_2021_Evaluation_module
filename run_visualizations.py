@@ -13,5 +13,7 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	if args.config_id == 1:
-		arr_exp = ['PHD-107', 'PHD-108', 'PHD-109']
-		plot_pos_neg_comparison.plot(arr_exp)
+		arr_exp = ['PHD-111', 'PHD-112']
+		names = ['oob isomap', 'oob PCA']
+		title = 'ID=GTSRB; OOD=BTSC;'
+		plot_pos_neg_comparison.plot(arr_exp, names, title, args.path_for_saving_plots)

@@ -540,13 +540,10 @@ def plot_single_clf_pca_actFunc_based_analysis(model, dataset_name, clf, instanc
     #plt.show()
 
 
-def visualize_experiments(id_experiments, names, title, classes_to_monitor):
-
-    project = neptune.init('raulsenaferreira/PhD')
-    experiments = project.get_experiments(id=id_experiments)
+def visualize_experiments(experiments, threat, names, title, classes_to_monitor):
 
     arr_readouts = []
-    img_folder_path = os.path.join('src', 'tests', 'results', 'img') 
+    img_folder_path = os.path.join('plots', threat, 'img') 
 
     for experiment, name in zip(experiments, names):
         avg_cf = {}
@@ -577,3 +574,68 @@ def visualize_experiments(id_experiments, names, title, classes_to_monitor):
     fig_name = img_folder_path+'all_methods_class_'+title+'.pdf'
     os.makedirs(img_folder_path, exist_ok=True)
     metrics.plot_pos_neg_rate_stacked_bars_total(title, arr_readouts, classes_to_monitor, fig_name)
+
+
+def pos_neg_stacked_bars(title, arr_readouts, fig_path):
+    figures = []
+    x = []
+    y_fp = [] 
+    y_fn = [] 
+    y_tp = [] 
+    y_tn = []
+
+    #COLOR = 'black'
+    #mpl.rcParams['text.color'] = 'white'
+    #mpl.rcParams['axes.labelcolor'] = 'black'
+    #mpl.rcParams['xtick.color'] = 'black'
+    #mpl.rcParams['ytick.color'] = 'black'
+    mpl.rcParams['font.size'] = 12
+
+    for readout in arr_readouts:
+        fp, fn, tp, tn = 0, 0, 0, 0
+        x.append(readout.name)
+
+        y_fp.append(fp)
+        y_fn.append(fn)
+        y_tp.append(tp)
+        y_tn.append(tn)
+
+    xticks = [i for i in range(len(x))]
+    
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    width = 0.3
+    blue = [0, .4, .6]
+    yellow = [1, 0.65, 0.25]
+    red = [1, 0, 0]
+    #darkgrey = 'darkgrey'
+    #gray = 'gray'
+    #grey = 'grey'
+    ax.bar(x, y_tp, color=blue, edgecolor="white", width=width, label='True positive')
+    sums = y_tp
+    ax.bar(x, y_fn, bottom=sums, color=yellow, edgecolor="white", hatch="x", width=width, label='False negative')
+    sums =[_x + _y for _x, _y in zip(sums, y_fn)]
+    ax.bar(x, y_fp, bottom=sums, color=red, edgecolor='white', hatch=".", width=width, label='False positive')
+    sums = [_x + _y for _x, _y in zip(sums, y_fp)]
+    #ax.bar(x, y_tn, bottom=sums, color=[0, 0.2, 0.1], edgecolor='white', hatch="*", width=width, label='True negative')
+
+    ax.set_xlabel("Methods")
+    ax.set_ylabel("Instances")
+    #ax.set_ylim([0, 100])
+    ax.xaxis.set_ticks(xticks, x)
+    ax.legend()
+    #ax.annotate('{}'.format(height))
+
+    for i in range(len(y_fp)):
+        plt.annotate(str(y_tp[i]), xy=(width/2+i-0.2, y_tp[i]*0.2), va='bottom', ha='left')
+        plt.annotate(str(y_fn[i]), xy=(width/2+i-0.2, (y_fn[i]+y_tp[i])-y_fn[i]*0.5), va='bottom', ha='left')
+        plt.annotate(str(y_fp[i]), xy=(width/2+i-0.2, (y_fp[i]+y_fn[i]+y_tp[i])-y_fp[i]*0.5), va='bottom', ha='left')
+        
+    
+
+    fig.suptitle(title)
+    ax.figure.canvas.set_window_title(title)
+    figures.append(fig)
+    plt.show()
+
+    multipage(fig_path, figures, dpi=250)
