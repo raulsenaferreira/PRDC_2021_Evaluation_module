@@ -520,3 +520,6 @@ if __name__ == '__main__':
                    'weapon': ['sai', 'bo staff']})
 	print(df.to_latex(index=False))
 	'''
+
+
+	
