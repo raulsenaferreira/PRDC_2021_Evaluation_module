@@ -7,4 +7,9 @@ python -m venv env
 
 pip install -r requirements.txt
 
-python run_visualization.py config_id path_for_saving_plots
+python run_visualization.py 1 plots
+
+## Configuration
+config_id -> type=int, help="ID for a set of pre-defined visualizations"
+
+path_for_saving_plots -> type=String, help="Root path for saving visualizations"
