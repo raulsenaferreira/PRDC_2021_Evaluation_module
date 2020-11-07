@@ -1,5 +1,22 @@
 import os
 import numpy as np
+import keras
+from keras.models import Model
+
+
+def get_activ_func(model, image, layerIndex):
+	inter_output_model = Model(inputs = model.input, outputs = model.get_layer(index=layerIndex).output) #last layer: index 7 or name 'dense'
+	return inter_output_model.predict(image)
+
+
+def act_func(model, X):
+	arrWeights = []
+
+	for img in X:
+		img = np.asarray([img])
+		arrWeights.append(get_activ_func(model, img, layerIndex=-2)[0])
+
+	return arrWeights
 
 
 def load_artifact(artifact_name, neptune_experiments):	

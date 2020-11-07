@@ -1,4 +1,5 @@
 import os
+import logging
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -8,9 +9,27 @@ import matplotlib.patches as mpatches
 from matplotlib.backends.backend_pdf import PdfPages
 import pickle
 from src import util
+from sklearn.manifold import TSNE, Isomap
+from keras.models import load_model
+import seaborn as sns
 #from shapely.geometry import Point
 #from shapely.geometry.polygon import Polygon
 
+sns.set()
+
+def set_tf_loglevel(level):
+    if level >= logging.FATAL:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    if level >= logging.ERROR:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+    if level >= logging.WARNING:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+    else:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
+    logging.getLogger('tensorflow').setLevel(level)
+
+
+set_tf_loglevel(logging.FATAL)
 
 
 def multipage(filename, figs=None, dpi=200):
@@ -24,24 +43,99 @@ def multipage(filename, figs=None, dpi=200):
     #multipage('multipage_w_raster.pdf', [fig2, fig3], dpi=250)
 
 
-def plotDistributions(distributions):
-    i=0
-    #ploting
+def visualize_distributions(X, y, dataset_name, model_file):
+    def unison_shuffled_copies(a, b):
+        assert len(a) == len(b)
+        p = np.random.permutation(len(a))
+        return a[p], b[p]
+
+    X, y = unison_shuffled_copies(X, y)
+
     fig = plt.figure()
-    handles = []
-    colors = ['magenta', 'cyan']
-    classes = ['cluster 1', 'cluster 2']
-    ax = fig.add_subplot(121)
+    ax = fig.add_subplot(111)
 
-    for X in distributions:
-        #reducing to 2-dimensional data
-        x=classifiers.pca(X, 2)
+    df_subset = {}
+    number_of_classes = 10 # for visualization readability purposes it is limited to 10
+    number_of_instances = 2000 # number of points to be ploted 
 
-        handles.append(ax.scatter(x[:, 0], x[:, 1], color=colors[i], s=5, edgecolor='none'))
-        i+=1
+    #indices = np.unique(y, return_index=True)[1]
+    indices = np.where(y < number_of_classes)[0]
+    y = y[indices]
+    y = y.flatten() # correcting bug
+    y = y[:number_of_instances]
 
-    ax.legend(handles, classes)
+    # loading model and extracting the image features
+    model = load_model(model_file)
+    data = X[indices]
+    data = data[:number_of_instances]
+    
+    #print(np.shape(data[:number_of_instances]))
+    weights = util.act_func(model, data)
 
+    #between 32 and 64 dim is enough for keep more than 90% of explained variance of the images:
+    #https://openaccess.thecvf.com/content_CVPR_2019/papers/Gong_On_the_Intrinsic_Dimensionality_of_Image_Representations_CVPR_2019_paper.pdf
+    isomap = Isomap(n_components = 32) 
+    compressed_data = isomap.fit_transform(weights)
+
+    tsne = TSNE(n_components=2, verbose=0, perplexity=40, n_iter=300).fit_transform(compressed_data)
+    #tsne = TSNE(n_components=2).fit_transform(compressed_data)
+    #print(tsne[:,0])
+    #print(tsne[:,1])
+    df_subset['one'] = tsne[:,0]
+    df_subset['two'] = tsne[:,1]
+    df_subset['y'] = y
+
+    ax = sns.scatterplot(
+        x="one", y="two",
+        hue="y",
+        palette=sns.color_palette("hls", len(np.unique(y)) ),
+        data=df_subset,
+        legend="full" #, alpha=0.3,  ax=ax3
+    )
+    plt.show()
+
+
+def visualize_pair_distributions(x_train, y_train, dataset_name, model_file, x_train_2, y_train_2, dataset_name_2, model_file_2):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    df_subset = {}
+    number_of_classes = 10 # for visualization readability purposes it is limited to 10
+    number_of_instances = 20000 # number of points to be ploted 
+
+    #indices = np.unique(y, return_index=True)[1]
+    indices_x = np.where(y < number_of_classes)[0]
+    y = np.where(y < number_of_classes)[1]
+    #y = y[:number_of_instances]
+
+    # loading model and extracting the image features
+    model = load_model(model_file)
+    data = X[indices_x]
+    #data = data[:number_of_instances]
+    
+    #print(np.shape(data[:number_of_instances]))
+    weights = util.act_func(model, data)
+
+    #between 32 and 64 dim is enough for keep more than 90% of explained variance of the images:
+    #https://openaccess.thecvf.com/content_CVPR_2019/papers/Gong_On_the_Intrinsic_Dimensionality_of_Image_Representations_CVPR_2019_paper.pdf
+    isomap = Isomap(n_components = 32) 
+    compressed_data = isomap.fit_transform(weights)
+
+    #tsne = TSNE(n_components=2, verbose=0, perplexity=40, n_iter=300)
+    tsne = TSNE(n_components=2).fit_transform(compressed_data)
+    #print(tsne[:,0])
+    #print(tsne[:,1])
+    df_subset['one'] = tsne[:,0]
+    df_subset['two'] = tsne[:,1]
+    df_subset['y'] = y
+
+    ax = sns.scatterplot(
+        x="one", y="two",
+        hue="y",
+        palette=sns.color_palette("hls", len(np.unique(y)) ),
+        data=df_subset,
+        legend="full" #, alpha=0.3,  ax=ax3
+    )
     plt.show()
 
 

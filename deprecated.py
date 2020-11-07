@@ -49,6 +49,10 @@ def plot_images(data, labels, num_row, num_col):
 
 
 def plot_distribution(data):
+	#between 32 and 64 dim is enough for keep more than 90% of explained variance of the images:
+	#https://openaccess.thecvf.com/content_CVPR_2019/papers/Gong_On_the_Intrinsic_Dimensionality_of_Image_Representations_CVPR_2019_paper.pdf
+	isomap = Isomap(n_components = 32) 
+	data = isomap.fit_transform(data)
 
 	tsne = TSNE(n_components=2).fit_transform(data)
 
@@ -105,6 +109,36 @@ def act_func(model, X):
 		arrWeights.append(util.get_activ_func(model, img, layerIndex=-2)[0])
 
 	return arrWeights
+
+
+def visualize_distributions_2(dataset, dataset_name):
+	df_subset = {}
+
+	X, y = dataset
+	#indices = np.unique(y, return_index=True)[1]
+	indices = np.where(y < 20)
+	#print(indices)
+
+	#between 32 and 64 dim is enough for keep more than 90% of explained variance of the images:
+	#https://openaccess.thecvf.com/content_CVPR_2019/papers/Gong_On_the_Intrinsic_Dimensionality_of_Image_Representations_CVPR_2019_paper.pdf
+	isomap = Isomap(n_components = 32) 
+	data = isomap.fit_transform(X)
+
+	#tsne = TSNE(n_components=2, verbose=0, perplexity=40, n_iter=300)
+	tsne = TSNE(n_components=2).fit_transform(data)
+
+	df_subset['one'] = tsne[:,0]
+	df_subset['two'] = tsne[:,1]
+	df_subset['y'] = y[indices]
+
+	ax = sns.scatterplot(
+		x="one", y="two",
+		hue="y",
+		palette=sns.color_palette("hls", 20),
+		data=df_subset,
+		legend="full"#, alpha=0.3,	ax=ax3
+	)
+	plt.show()
 
 
 def visualize_distributions(dataset):
