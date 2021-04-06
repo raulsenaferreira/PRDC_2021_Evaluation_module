@@ -737,3 +737,12 @@ def pos_neg_stacked_bars(title, methods, arr_pos_neg, fig_path):
     plt.show()
 
     multipage(fig_path, figures, dpi=250)
+
+
+def plot_critical_difference(names, avranks, num_datasets):
+    import Orange
+    import matplotlib.pyplot as plt 
+    
+    cd = Orange.evaluation.compute_CD(avranks, num_datasets)
+    Orange.evaluation.graph_ranks(avranks, names, reverse=False, cd=cd, width=5, textspace=1)
+    plt.show()

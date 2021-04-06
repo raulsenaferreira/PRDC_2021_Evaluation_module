@@ -43,11 +43,88 @@ def print_dataframe_to_latex(df_results, caption, label, path_for_saving_plots, 
 	df_results.to_latex(tex_path, caption=caption, label=label, escape=False, index=False)
 
 
-def plot1(arr_id, names, label, caption, path_for_saving_plots, path_for_load_neptune):
+def plot1(indices_experiments, readouts_SM_detection,
+		 names, label, caption, path_for_saving_plots):
 
-	#table_ML = {'Architecture': [], 'Accuracy': [], 'F1': [], 'F1-Micro': []}
-	#table_SM = {'Method': [], 'Detection': [], 'Confidence': [], 'Memory': [], 'Time': []}
-	table_system = {'Experiment': [], 'MCC': [], 'FPR': [], 'FNR': [], 'Precision': [], 'Recall': [], 'Micro-F1': []} #dict(Experiment= [], MCC= [], TP= [], FP= [], TN= [], FN= [], 'Micro-F1': [])
+	table_system = {'Method': [], 'MCC': [], 'FPR': [], 'FNR': [], 'Precision': [], 'Recall': [], 'Micro-F1': []} #dict(Method= [], MCC= [], TP= [], FP= [], TN= [], FN= [], 'Micro-F1': [])
+	
+	arr_detection_SM = readouts_SM_detection[0]
+	arr_detection_true = readouts_SM_detection[1]
+	
+	arr_cm = [[], [], [], []]
+	
+	for name, i in zip(names, indices_experiments):
+		y_true = arr_detection_true[i]
+		y_pred = arr_detection_SM[i]
+		#print('y_true', y_true)
+		#print('y_pred', y_pred)
+
+		cm_total = confusion_matrix(y_true, y_pred)
+		tn = cm_total[0][0]
+		fp = cm_total[0][1]
+		fn = cm_total[1][0]
+		tp = cm_total[1][1]
+		arr_cm[0].append(tn)
+		arr_cm[1].append(fp)
+		arr_cm[2].append(fn)
+		arr_cm[3].append(tp)
+		
+		cr = classification_report(y_true, y_pred, output_dict=True)
+		#print(cr)
+
+		df = pd.DataFrame(cm_total)
+
+		table_system['Method'].append(name)
+		table_system['MCC'].append(round(matthews_corrcoef(y_true, y_pred), 2))
+		table_system['FPR'].append(round(df.da.false_positive_rate.values[0], 2))
+		table_system['FNR'].append(round(df.da.false_negative_rate.values[0], 2))
+		table_system['Precision'].append(round(df.da.precision.values[0], 2))
+		table_system['Recall'].append(round(df.da.recall.values[0], 2))
+		table_system['Micro-F1'].append(round(cr['weighted avg']['f1-score'], 2))
+	
+	df_results = pd.DataFrame.from_dict(table_system)
+
+	print_dataframe_to_latex(df_results, caption, label, path_for_saving_plots, '{}.tex'.format(label))
+
+
+def plot2(arr_id, path_for_saving_plots):
+	
+	def plotBoxplot(data, labels):
+		fig, ax = plt.subplots()
+		#fig.add_subplot(111)
+		ax.boxplot(data, labels=labels)
+		plt.xticks(rotation=0)
+
+		plt.title('Mathews Correlation Coefficient Boxplot.')
+		plt.ylabel("Mathews Correlation Coefficient")
+		
+		plt.show()
+
+	data, labels = [], []
+	project = npte.neptune_init('novelty-detection')
+
+	for name, exp_id in arr_id.items():
+		mccs = []
+		labels.append(name)
+		experiments = project.get_experiments(exp_id)
+		
+		arr_detection_SM = util.load_artifact('arr_detection_SM.npy', experiments)
+		arr_detection_true = util.load_artifact('arr_detection_true.npy', experiments)
+		
+		arr_cm = [[], [], [], []]
+		
+		# total = ID + ODD
+		for y_true, y_pred in zip(arr_detection_true, arr_detection_SM):
+			
+			mccs.append(round(matthews_corrcoef(y_true, y_pred), 2))
+
+		data.append(mccs)
+
+	plotBoxplot(data, labels)
+
+
+def plot3():
+	table_system = {'Method': [], 'MCC': [], 'FPR': [], 'FNR': [], 'Precision': [], 'Recall': [], 'Micro-F1': []} #dict(Method= [], MCC= [], TP= [], FP= [], TN= [], FN= [], 'Micro-F1': [])
 	
 	project = npte.neptune_init(path_for_load_neptune)
 	experiments = project.get_experiments(arr_id)
@@ -74,7 +151,7 @@ def plot1(arr_id, names, label, caption, path_for_saving_plots, path_for_load_ne
 
 		df = pd.DataFrame(cm_total)
 
-		table_system['Experiment'].append(name)
+		table_system['Method'].append(name)
 		table_system['MCC'].append(round(matthews_corrcoef(y_true, y_pred), 2))
 		table_system['FPR'].append(round(df.da.false_positive_rate.values[0], 2))
 		table_system['FNR'].append(round(df.da.false_negative_rate.values[0], 2))
@@ -85,46 +162,3 @@ def plot1(arr_id, names, label, caption, path_for_saving_plots, path_for_load_ne
 	df_results = pd.DataFrame.from_dict(table_system)
 
 	print_dataframe_to_latex(df_results, caption, label, path_for_saving_plots, '{}.tex'.format(label))
-
-
-def plot2(arr_id, path_for_saving_plots):
-	
-
-	def plotBoxplot(data, labels):
-		fig, ax = plt.subplots()
-		#fig.add_subplot(111)
-		ax.boxplot(data, labels=labels)
-		plt.xticks(rotation=0)
-
-		plt.title('Mathews Correlation Coefficient Boxplot.')
-		plt.ylabel("Mathews Correlation Coefficient")
-		
-		plt.show()
-
-
-	data, labels = [], []
-	project = npte.neptune_init('novelty-detection')
-
-	for name, exp_id in arr_id.items():
-		mccs = []
-		labels.append(name)
-		experiments = project.get_experiments(exp_id)
-		
-		arr_detection_SM = util.load_artifact('Pos_Neg_Classified_ID.npy', experiments)
-		arr_detection_true = util.load_artifact('Pos_Neg_Labels_ID.npy', experiments)
-		arr_pnc_ood = util.load_artifact('Pos_Neg_Classified_OOD.npy', experiments)
-		arr_pnl_ood = util.load_artifact('Pos_Neg_Labels_OOD.npy', experiments)
-		
-		arr_cm = [[], [], [], []]
-		
-		# total = ID + ODD
-		for pnl_id, pnl_ood, pnc_id, pnc_ood in zip(arr_detection_true, arr_pnl_ood, arr_detection_SM, arr_pnc_ood):
-			
-			y_true = np.hstack([pnl_id, pnl_ood])
-			y_pred = np.hstack([pnc_id, pnc_ood])
-
-			mccs.append(round(matthews_corrcoef(y_true, y_pred), 2))
-
-		data.append(mccs)
-
-	plotBoxplot(data, labels)

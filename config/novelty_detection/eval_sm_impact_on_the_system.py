@@ -1,5 +1,4 @@
 import os
-import neptune_config as npte 
 from src.plot_functions import pos_neg_stacked_bars
 from src import util
 from src.Classes.readout import Readout
@@ -14,57 +13,86 @@ from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 
 
-def print_dataframe_to_latex(df_results, caption, label, path_for_saving_plots, file_name):
-	# it should be a for instead
-	ind = df_results['Balanced accuracy'].idxmax()
-	baseline = df_results['Balanced accuracy'][0]
-	
-	for i in range(1, len(df_results['Balanced accuracy'])):
-		proposal = df_results['Balanced accuracy'][i]
-		delta = round((proposal - baseline) / baseline * 100, 2)
-		
-		delta = '(+'+str(delta)+'\%)' if delta > 0 else '(-'+str(delta)+'\%)'
-		df_results['Balanced accuracy'][i] = '{} {}'.format(df_results['Balanced accuracy'][i], delta)
+def print_dataframe_to_latex(df_results, caption, label, cols, path_for_saving_plots, file_name):
+	 
+	def format_df_to_latex(df_results, col):
+		baseline = df_results[col][0]
+		ind = df_results[col].idxmax()
 
-	df_results['Balanced accuracy'].at[ind] = '\textbf{'+str(df_results['Balanced accuracy'][ind])+'}'
+		for i in range(1, len(df_results[col])):
+			proposal = df_results[col][i]
+			# formula 1
+			delta = round((proposal - baseline) / baseline * 100, 2)
+			# formula 2
+			#delta = round((proposal / baseline) * 100, 2) - 100
+
+			delta = '(+'+str(delta)+'\%)' if delta > 0 else '(-'+str(delta)+'\%)'
+			df_results[col][i] = '{} {}'.format(df_results[col][i], delta)
+
+		df_results[col].at[ind] = '\textbf{'+str(df_results[col][ind])+'}'
+
+		return df_results
+
+	df_results = format_df_to_latex(df_results, cols[1])
+	df_results = format_df_to_latex(df_results, cols[2])
+	df_results = format_df_to_latex(df_results, cols[3])
 
 	tex_path = os.path.join(path_for_saving_plots, 'tex', file_name)
 	
 	df_results.to_latex(tex_path, caption=caption, label=label, escape=False, index=False)
 
 
-def plot1(arr_id, names, label, caption, path_for_saving_plots, path_for_load_neptune):
-
-	#table_ML = {'Architecture': [], 'Accuracy': [], 'F1': [], 'F1-Micro': []}
-	#table_SM = {'Method': [], 'Detection': [], 'Confidence': [], 'Memory': [], 'Time': []}
-	table_system = {'Experiment': [], 'Balanced accuracy': []}
-	#table_novelty = {'TPR_ID_FPR_OOD': [], 'AUPR_ID': [], 'AUPR_OOD': []}
-
-	project = npte.neptune_init(path_for_load_neptune)
-	experiments = project.get_experiments(arr_id)
+def plot1(indices_experiments, classes_ID, classes_OOD, readouts_ML, readouts_SM_reaction,
+		 names, label, caption, path_for_saving_plots):
 	
-	arr_ml_pred = util.load_artifact('arr_classification_pred.npy', experiments)[0]
-	arr_ml_true = util.load_artifact('arr_classification_true.npy', experiments)[0]
-	print('arr_ml_pred', arr_ml_pred)
-	print('arr_ml_true', arr_ml_true)
+	def acc(arr_true, arr_pred):
+		return round(balanced_accuracy_score(arr_true, arr_pred), 2)
+
+	col_0 = 'Method / MCC'
+	col_1 = 'ID'
+	col_2 = 'OOD'
+	col_3 = 'Entire stream'
+	cols = [col_0, col_1, col_2, col_3]
+
+	table_system = {cols[0]: [], cols[1]: [], cols[2]: [], cols[3]: []}
 	
-	# baseline (ML alone)
-	table_system['Experiment'].append('Baseline')
-	table_system['Balanced accuracy'].append(round(balanced_accuracy_score(arr_ml_true, arr_ml_pred), 2))
+	ML_pred = readouts_ML[0][indices_experiments[0]]
+	labels = readouts_ML[1][indices_experiments[0]]
+	
+	# for measuring of correct/incorrect reactions divided into ID, OOD data and in total
+	y_true_ID = np.where(labels < classes_ID)[0]
+	y_true_OOD = np.where(labels >= classes_ID)[0]
+	
+	table_system[cols[0]].append('Baseline') # baseline (ML alone)
+	table_system[cols[1]].append(acc(labels[y_true_ID], ML_pred[y_true_ID]))
+	table_system[cols[2]].append(acc(labels[y_true_OOD], ML_pred[y_true_OOD]))
+	table_system[cols[3]].append(acc(labels, ML_pred))
 
 	# SM methods
-	arr_reaction_SM = util.load_artifact('arr_reaction_SM.npy', experiments)
-	arr_reaction_true = util.load_artifact('arr_reaction_true.npy', experiments)
+	arr_reaction_SM = readouts_SM_reaction[0]
+	arr_reaction_true = readouts_SM_reaction[1]
 
-	for name, y_true, y_pred in zip(names, arr_reaction_true, arr_reaction_SM):
+	for i, name in zip(indices_experiments, names):
+		print('name: {}, experiment: {}'.format(name, i))
+		
+		reaction_true, reaction_pred = arr_reaction_true[i], arr_reaction_SM[i]
 
-		table_system['Experiment'].append(name)
-		table_system['Balanced accuracy'].append(round(balanced_accuracy_score(y_true, y_pred), 2))
+		y_true_ID = np.where(reaction_true < classes_ID)[0]
+		y_true_OOD = np.where(reaction_true >= classes_ID)[0]
+
+		reaction_pred_ID, reaction_pred_OOD = reaction_pred[y_true_ID], reaction_pred[y_true_OOD]
+		reaction_true_ID, reaction_true_OOD = reaction_true[y_true_ID], reaction_true[y_true_OOD]
+
+		# getting some measurements
+		table_system[cols[0]].append(name)
+		table_system[cols[1]].append(acc(reaction_true_ID, reaction_pred_ID))
+		table_system[cols[2]].append(acc(reaction_true_OOD, reaction_pred_OOD))
+		table_system[cols[3]].append(acc(reaction_true, reaction_pred))		
 
 	df_results = pd.DataFrame.from_dict(table_system)
 	#print(df_results)
 
-	print_dataframe_to_latex(df_results, caption, label, path_for_saving_plots, '{}.tex'.format(label))
+	print_dataframe_to_latex(df_results, caption, label, cols, path_for_saving_plots, '{}.tex'.format(label))
 
 
 def plot2(arr_id, listOfMethods, path_for_saving_plots):
@@ -92,17 +120,83 @@ def plot2(arr_id, listOfMethods, path_for_saving_plots):
 	project = npte.neptune_init('novelty-detection')
 	experiments = project.get_experiments(arr_id)
 	
-	arr_pnc_id = util.load_artifact('Pos_Neg_Classified_ID.npy', experiments)
-	arr_pnl_id = util.load_artifact('Pos_Neg_Labels_ID.npy', experiments)
-	arr_pnc_ood = util.load_artifact('Pos_Neg_Classified_OOD.npy', experiments)
-	arr_pnl_ood = util.load_artifact('Pos_Neg_Labels_OOD.npy', experiments)
+	arr_ml_pred = util.load_artifact('arr_classification_pred.npy', experiments)[0]
+	arr_ml_true = util.load_artifact('arr_classification_true.npy', experiments)[0]
 	
 	# total = ID + ODD
-	for pnl_id, pnl_ood, pnc_id, pnc_ood in zip(arr_pnl_id, arr_pnl_ood, arr_pnc_id, arr_pnc_ood):
+	for y_true, y_pred in zip(arr_ml_true, arr_ml_pred):
 		
-		y_true = np.hstack([pnl_id, pnl_ood])
-		y_pred = np.hstack([pnc_id, pnc_ood])
-
 		listOfResults.append((y_true, y_pred))
 
 	plot_precision_recall_curves(listOfResults)
+
+
+
+def print_dataframe_to_latex_B(datasets, df_results, caption, label, cols, path_for_saving_plots, file_name):
+	 
+	def format_df_to_latex(baseline, row, df_results, col):
+	
+		proposal = df_results[col][row]
+		# formula 1
+		delta = round((proposal - baseline) / baseline * 100, 2)
+		# formula 2
+		#delta = round((proposal / baseline) * 100, 2) - 100
+
+		delta = '(+'+str(delta)+'\%)' if delta > 0 else '(-'+str(delta)+'\%)'
+		df_results[col][row] = '{} {}'.format(df_results[col][row], delta)
+
+		return df_results
+
+	for row in range(len(datasets)):
+		baseline = df_results[cols[1]][row]
+		
+		for i in range(2, len(cols)):
+			df_results = format_df_to_latex(baseline, row, df_results, cols[i])
+
+	tex_path = os.path.join(path_for_saving_plots, 'tex', file_name)
+	
+	df_results.to_latex(tex_path, caption=caption, label=label, escape=False, index=False)
+
+
+def plot1_B(datasets, indices_experiments, classes_ID, readouts_ML, readouts_SM_reaction,
+		 names, label, caption, path_for_saving_plots):
+	
+	def acc(arr_true, arr_pred):
+		return round(matthews_corrcoef(arr_true, arr_pred), 2)
+
+	table_system = {}
+	cols = ['Data/Method', 'ML']
+	
+	for name in names:
+		cols.append(name)
+
+	for col in cols:
+		table_system.update({col: []})
+
+	for dataset in datasets:
+		table_system[cols[0]].append(dataset)
+
+		arr_reaction_SM = readouts_SM_reaction[0]
+		arr_reaction_true = readouts_SM_reaction[1]
+
+		# for measuring of correct/incorrect reactions when exposed to ID data
+		labels = readouts_ML[1][indices_experiments[dataset][0]]
+		y_true_ID = np.where(labels < classes_ID[dataset])[0]
+		
+		# including baseline measurements
+		ML_pred = readouts_ML[0][indices_experiments[dataset][0]]
+
+		table_system[cols[1]].append(acc(labels[y_true_ID], ML_pred[y_true_ID]))
+		
+		for name, i in zip(names, indices_experiments[dataset]):
+			# SM methods
+			reaction_true, reaction_pred = arr_reaction_true[i], arr_reaction_SM[i]
+			y_true_ID = np.where(reaction_true < classes_ID[dataset])[0]
+
+			reaction_pred_ID, reaction_true_ID = reaction_pred[y_true_ID], reaction_true[y_true_ID]
+
+			table_system[name].append(acc(reaction_true_ID, reaction_pred_ID))
+
+	df_results = pd.DataFrame.from_dict(table_system)
+
+	print_dataframe_to_latex_B(datasets, df_results, caption, label, cols, path_for_saving_plots, '{}.tex'.format(label))
