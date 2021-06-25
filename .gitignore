@@ -1,4 +1,5 @@
 env/
+linuxenv/
 aux_data/
 src/__pycache__/
 plots/

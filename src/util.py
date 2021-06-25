@@ -29,11 +29,31 @@ def load_artifact(artifact_name, neptune_experiments):
 		experiment.download_artifact(artifact_name, tmp_path)
 		file_path = os.path.join(tmp_path, artifact_name)
 		arr = np.load(file_path, allow_pickle=True)
+
 		os.remove(file_path)
 
 		result_arr.append(arr)
 
 	return result_arr
+
+
+def load_artifact_2(artifact_name, neptune_experiments):
+	result_arr = []
+	tmp_path = os.path.join('aux_data', 'temp')
+	os.makedirs(tmp_path, exist_ok=True)
+
+	for experiment in neptune_experiments:
+		experiment.download_artifact(artifact_name, tmp_path)
+		file_path = os.path.join(tmp_path, artifact_name)
+
+		data = []
+		while True:
+			packet = s.recv(4096)
+			if not packet: break
+			data.append(packet)
+		data_arr = pickle.loads(b"".join(data))
+		print (data_arr)
+		s.close()
 
 
 def load_time_info(neptune_experiments, instances, indices_experiments, path_for_saving_plots, dataset, names):
