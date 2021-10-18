@@ -8,6 +8,8 @@ python -m venv env
 
 pip install -r requirements.txt
 
+P.S.: We use https://neptune.ai/ for storing and retrieving the results. Just change the username in the script neptune_config. However, it is quite easy to change the code to make it save in csv files instead of using a cloud tool.
+
 ## Configuration
 config_id -> type=int, help="ID for a set of pre-defined visualizations"
 
